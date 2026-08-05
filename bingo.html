@@ -617,7 +617,7 @@
     "send me pdf",
     "ask chagtp",
     "Ask Gemini",
-    "Write on the board",
+    "Write down",
     "you are very smart",
     "very intelligent",
     "you improved a lot",
@@ -693,14 +693,29 @@
   }
 
   function makeGrid() {
-    var pool = shuffle(PHRASES.concat(PHRASES)).slice(0, 24);
+    var slots = 24;
+    var rest = [];
+    for (var i = 0; i < 25; i++) if (i !== FREE_INDEX) rest.push(i);
+    rest = shuffle(rest);
+
     var cells = new Array(25);
-    cells[FREE_INDEX] = "FREE";
-    var p = 0;
-    for (var i = 0; i < 25; i++) {
-      if (i !== FREE_INDEX) cells[i] = pool[p++];
+    var freeIndices = [FREE_INDEX];
+
+    if (PHRASES.length >= slots) {
+      var picked = shuffle(PHRASES).slice(0, slots);
+      cells[FREE_INDEX] = "FREE";
+      rest.forEach(function (idx, i) { cells[idx] = picked[i]; });
+    } else {
+      var extraFreeCount = slots - PHRASES.length;
+      var extraFreeIdx = rest.slice(0, extraFreeCount);
+      var phraseIdx = rest.slice(extraFreeCount);
+      freeIndices = freeIndices.concat(extraFreeIdx);
+      var phrases = shuffle(PHRASES);
+      freeIndices.forEach(function (idx) { cells[idx] = "FREE"; });
+      phraseIdx.forEach(function (idx, i) { cells[idx] = phrases[i]; });
     }
-    return { cells: cells, freeIndices: [FREE_INDEX] };
+
+    return { cells: cells, freeIndices: freeIndices };
   }
 
   function newState() {
