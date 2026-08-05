@@ -465,6 +465,7 @@
   ];
 
   var FREE_INDEX = 12;
+  var FREE_COUNT = 25 - PHRASES.length;
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var LINES = (function () {
@@ -507,21 +508,29 @@
   }
 
   function makeGrid() {
-    var pool = shuffle(PHRASES.concat(PHRASES)).slice(0, 24);
-    var cells = [];
-    var p = 0;
-    for (var i = 0; i < 25; i++) {
-      if (i === FREE_INDEX) { cells.push("LIBRE"); }
-      else { cells.push(pool[p++]); }
-    }
-    return cells;
+    var rest = [];
+    for (var i = 0; i < 25; i++) if (i !== FREE_INDEX) rest.push(i);
+    rest = shuffle(rest);
+
+    var extraFreeIdx = rest.slice(0, FREE_COUNT - 1);
+    var phraseIdx = rest.slice(FREE_COUNT - 1);
+    var freeIndices = [FREE_INDEX].concat(extraFreeIdx);
+    var phrases = shuffle(PHRASES);
+
+    var cells = new Array(25);
+    freeIndices.forEach(function (idx) { cells[idx] = "FREE"; });
+    phraseIdx.forEach(function (idx, i) { cells[idx] = phrases[i]; });
+
+    return { cells: cells, freeIndices: freeIndices };
   }
 
   function newState() {
+    var built = makeGrid();
     var marked = new Array(25).fill(false);
-    marked[FREE_INDEX] = true;
+    built.freeIndices.forEach(function (idx) { marked[idx] = true; });
     return {
-      cells: makeGrid(),
+      cells: built.cells,
+      freeIndices: built.freeIndices,
       marked: marked,
       completed: [],
       ticket: Math.floor(1000 + Math.random() * 9000),
@@ -537,7 +546,7 @@
   function render() {
     grid.innerHTML = "";
     for (var i = 0; i < 25; i++) {
-      var isFree = i === FREE_INDEX;
+      var isFree = state.freeIndices.indexOf(i) !== -1;
       var cell = document.createElement(isFree ? "div" : "button");
       cell.className = "cell" + (isFree ? " free marked" : "");
       cell.style.setProperty("--rot", hashRotation(i));
