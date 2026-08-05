@@ -460,11 +460,10 @@
     "Come to my office",
     "Hmmm huh ?",
     "Gabriel",
-    "Answer the phone"
+    "“Answer the phone”"
   ];
 
   var FREE_INDEX = 12;
-  var STORE_KEY = "bingo-card-v1";
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var LINES = (function () {
@@ -527,20 +526,6 @@
       ticket: Math.floor(1000 + Math.random() * 9000),
       printed: new Date().toISOString()
     };
-  }
-
-  function saveState() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
-  }
-
-  function loadState() {
-    try {
-      var raw = localStorage.getItem(STORE_KEY);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.cells) || parsed.cells.length !== 25) return null;
-      return parsed;
-    } catch (e) { return null; }
   }
 
   function hashRotation(i) {
@@ -629,7 +614,6 @@
 
     applyLineHighlights();
     updateStats();
-    saveState();
 
     if (freshlyNew.length > 0) {
       celebrate(freshlyNew.length, now.length);
@@ -651,7 +635,6 @@
 
   function resetGrid() {
     state = newState();
-    saveState();
     render();
     closeOverlay();
   }
@@ -664,9 +647,7 @@
     if (e.key === "Escape" && overlay.classList.contains("show")) closeOverlay();
   });
 
-  var loaded = loadState();
-  state = loaded || newState();
-  if (!loaded) saveState();
+  state = newState();
   render();
 
   var canvas = document.getElementById("confetti");
