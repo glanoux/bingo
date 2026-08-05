@@ -468,7 +468,6 @@
   ];
 
   var FREE_INDEX = 12;
-  var FREE_COUNT = 25 - PHRASES.length;
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var LINES = (function () {
@@ -511,20 +510,14 @@
   }
 
   function makeGrid() {
-    var rest = [];
-    for (var i = 0; i < 25; i++) if (i !== FREE_INDEX) rest.push(i);
-    rest = shuffle(rest);
-
-    var extraFreeIdx = rest.slice(0, FREE_COUNT - 1);
-    var phraseIdx = rest.slice(FREE_COUNT - 1);
-    var freeIndices = [FREE_INDEX].concat(extraFreeIdx);
-    var phrases = shuffle(PHRASES);
-
+    var pool = shuffle(PHRASES.concat(PHRASES)).slice(0, 24);
     var cells = new Array(25);
-    freeIndices.forEach(function (idx) { cells[idx] = "FREE"; });
-    phraseIdx.forEach(function (idx, i) { cells[idx] = phrases[i]; });
-
-    return { cells: cells, freeIndices: freeIndices };
+    cells[FREE_INDEX] = "FREE";
+    var p = 0;
+    for (var i = 0; i < 25; i++) {
+      if (i !== FREE_INDEX) cells[i] = pool[p++];
+    }
+    return { cells: cells, freeIndices: [FREE_INDEX] };
   }
 
   function newState() {
