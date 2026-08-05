@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Phrase Bingo</title>
 <style>
   @font-face {
@@ -392,7 +393,114 @@
   @media (max-width: 380px) {
     .letters span { letter-spacing: 0; }
   }
+
+  .foot-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .gate-card { max-width: 380px; }
+
+  .gate-card .stampword {
+    font-size: clamp(2.1rem, 10vw, 2.8rem);
+    margin-top: 4px;
+  }
+
+  .card-eyebrow {
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 2px;
+  }
+
+  .gate-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 18px 0 4px;
+  }
+
+  .gate-input {
+    font-family: "Space Mono", ui-monospace, monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 11px 12px;
+    background: #f4eeda;
+    border: 1.5px solid var(--card-shade);
+    color: var(--ink);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .gate-input:focus-visible {
+    outline: 2.5px solid var(--ring-focus);
+    outline-offset: 1px;
+  }
+
+  .gate-board {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1.5px dashed var(--brass);
+    text-align: left;
+  }
+
+  .board-card { max-width: 400px; }
+  .board-card .stampword { font-size: clamp(1.6rem, 7vw, 2.1rem); }
+
+  .board-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 0 0;
+    padding: 0;
+    text-align: left;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+
+  .board-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.74rem;
+    font-variant-numeric: tabular-nums;
+    padding: 4px 0;
+    border-bottom: 1px dotted var(--card-shade);
+  }
+
+  .board-list .b-name {
+    font-weight: 700;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .board-list .b-time {
+    color: var(--dauber);
+    font-weight: 700;
+    flex: none;
+  }
 </style>
+
+<div class="overlay show" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="win-card gate-card">
+    <p class="card-eyebrow">Box office · enter to play</p>
+    <span class="stampword" id="gateTitle">BINGO</span>
+    <p>Enter your name to pick up your card. The clock starts the moment you hit play.</p>
+    <form id="gateForm" class="gate-form">
+      <input id="nameInput" class="gate-input" type="text" maxlength="24" placeholder="Your name" aria-label="Your name" autocomplete="off" autofocus required>
+      <button class="reshuffle" type="submit">Get my card</button>
+    </form>
+    <div class="gate-board">
+      <p class="card-eyebrow">Fastest so far</p>
+      <p id="gateBoardStatus" class="status">Loading fastest times…</p>
+      <ol class="board-list" id="gateBoardList"></ol>
+    </div>
+  </div>
+</div>
 
 <div class="stage">
   <header class="masthead">
@@ -406,7 +514,7 @@
     <div class="ticket-head">
       <span><span class="label">Marked</span><br><span class="value" id="statMarked">1 / 25</span></span>
       <span style="text-align:center"><span class="label">Lines</span><br><span class="value" id="statLines">0</span></span>
-      <span style="text-align:right"><span class="label">Printed</span><br><span class="value" id="statDate">—</span></span>
+      <span style="text-align:right"><span class="label">Time</span><br><span class="value" id="statTime">00:00.0</span></span>
     </div>
 
     <div class="letters">
@@ -417,7 +525,10 @@
 
     <div class="foot-row">
       <p class="status">Click a square as soon as it's said. <strong>5</strong> in a row &#8594; bingo.</p>
-      <button class="reshuffle" id="reshuffleBtn" type="button">New card</button>
+      <div class="foot-actions">
+        <button class="btn-ghost" id="leaderboardBtn" type="button">Leaderboard</button>
+        <button class="reshuffle" id="reshuffleBtn" type="button">New card</button>
+      </div>
     </div>
     <div class="perf bottom"></div>
   </div>
@@ -436,7 +547,57 @@
   </div>
 </div>
 
+<div class="overlay" id="boardOverlay" role="dialog" aria-modal="true" aria-labelledby="boardTitle">
+  <div class="win-card board-card">
+    <span class="stampword" id="boardTitle">TOP 10</span>
+    <p id="boardStatus">Loading fastest times…</p>
+    <ol class="board-list" id="boardList"></ol>
+    <div class="win-actions">
+      <button class="btn-ghost" id="closeBoardBtn" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
 <canvas id="confetti"></canvas>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  var firebaseConfig = {
+    apiKey: "AIzaSyAGKMec_CMQkS-Kr5mJA5Ll23TziixzVBE",
+    authDomain: "bingo-5baa9.firebaseapp.com",
+    projectId: "bingo-5baa9",
+    storageBucket: "bingo-5baa9.firebasestorage.app",
+    messagingSenderId: "53619907070",
+    appId: "1:53619907070:web:c59d09776a2e13498108af"
+  };
+
+  var app = initializeApp(firebaseConfig);
+  var db = getFirestore(app);
+
+  window.__bingo = {
+    submitScore: function (name, timeMs) {
+      return addDoc(collection(db, "scores"), {
+        name: String(name).slice(0, 24),
+        timeMs: Math.round(timeMs),
+        createdAt: serverTimestamp()
+      }).then(function () { return true; }).catch(function () { return false; });
+    },
+    fetchTop: function (n) {
+      var q = query(collection(db, "scores"), orderBy("timeMs", "asc"), limit(n || 10));
+      return getDocs(q).then(function (snap) {
+        var out = [];
+        snap.forEach(function (doc) { out.push(doc.data()); });
+        return out;
+      }).catch(function () { return []; });
+    }
+  };
+
+  window.dispatchEvent(new Event("bingo-db-ready"));
+</script>
 
 <script>
 (function () {
@@ -492,13 +653,30 @@
   var overlayText = document.getElementById("overlayText");
   var statMarked = document.getElementById("statMarked");
   var statLines = document.getElementById("statLines");
-  var statDate = document.getElementById("statDate");
+  var statTime = document.getElementById("statTime");
   var ticketNo = document.getElementById("ticketNo");
   var reshuffleBtn = document.getElementById("reshuffleBtn");
   var continueBtn = document.getElementById("continueBtn");
   var newFromWinBtn = document.getElementById("newFromWinBtn");
 
+  var gate = document.getElementById("gate");
+  var gateForm = document.getElementById("gateForm");
+  var nameInput = document.getElementById("nameInput");
+  var gateBoardList = document.getElementById("gateBoardList");
+  var gateBoardStatus = document.getElementById("gateBoardStatus");
+
+  var leaderboardBtn = document.getElementById("leaderboardBtn");
+  var boardOverlay = document.getElementById("boardOverlay");
+  var boardList = document.getElementById("boardList");
+  var boardStatus = document.getElementById("boardStatus");
+  var closeBoardBtn = document.getElementById("closeBoardBtn");
+
   var state = null;
+  var playerName = "";
+  var startTime = 0;
+  var scored = false;
+  var timerInterval = null;
+  var dbState = "pending";
 
   function shuffle(arr) {
     var a = arr.slice();
@@ -529,14 +707,37 @@
       freeIndices: built.freeIndices,
       marked: marked,
       completed: [],
-      ticket: Math.floor(1000 + Math.random() * 9000),
-      printed: new Date().toISOString()
+      ticket: Math.floor(1000 + Math.random() * 9000)
     };
   }
 
   function hashRotation(i) {
     var v = (i * 47 + 13) % 37;
     return (v - 18) + "deg";
+  }
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+
+  function formatTime(ms) {
+    var totalCentis = Math.floor(ms / 10);
+    var m = Math.floor(totalCentis / 6000);
+    var s = Math.floor((totalCentis % 6000) / 100);
+    var c = totalCentis % 100;
+    return pad2(m) + ":" + pad2(s) + "." + Math.floor(c / 10);
+  }
+
+  function startTimer() {
+    stopTimer();
+    updateTimerDisplay();
+    timerInterval = setInterval(updateTimerDisplay, 100);
+  }
+
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  }
+
+  function updateTimerDisplay() {
+    statTime.textContent = formatTime(Date.now() - startTime);
   }
 
   function render() {
@@ -601,9 +802,6 @@
     var markedCount = state.marked.filter(Boolean).length;
     statMarked.textContent = markedCount + " / 25";
     statLines.textContent = String(state.completed.length);
-    var d = new Date(state.printed);
-    statDate.textContent = d.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit" }) + " " +
-      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
     ticketNo.textContent = "Official card · No. " + state.ticket;
   }
 
@@ -622,17 +820,33 @@
     updateStats();
 
     if (freshlyNew.length > 0) {
-      celebrate(freshlyNew.length, now.length);
+      var firstWin = !scored;
+      var elapsedMs = null;
+      if (firstWin) {
+        scored = true;
+        stopTimer();
+        elapsedMs = Date.now() - startTime;
+        statTime.textContent = formatTime(elapsedMs);
+      }
+      celebrate(freshlyNew.length, now.length, elapsedMs);
     }
   }
 
-  function celebrate(newCount, totalCount) {
+  function celebrate(newCount, totalCount, elapsedMs) {
     var word = newCount > 1 ? "lines completed" : "line completed";
-    overlayText.textContent = totalCount > newCount
+    var base = totalCount > newCount
       ? (newCount + " new " + word + " — " + totalCount + " total. Official stamp applied.")
       : word.charAt(0).toUpperCase() + word.slice(1) + " — official stamp applied to the card.";
+
+    overlayText.textContent = elapsedMs != null ? (base + " Your time: " + formatTime(elapsedMs) + ".") : base;
     overlay.classList.add("show");
     if (!reduceMotion) burstConfetti();
+
+    if (elapsedMs != null && window.__bingo) {
+      window.__bingo.submitScore(playerName, elapsedMs).then(function (ok) {
+        if (ok) overlayText.textContent += " Saved to the leaderboard.";
+      });
+    }
   }
 
   function closeOverlay() {
@@ -643,6 +857,9 @@
     state = newState();
     render();
     closeOverlay();
+    scored = false;
+    startTime = Date.now();
+    startTimer();
   }
 
   reshuffleBtn.addEventListener("click", resetGrid);
@@ -653,8 +870,80 @@
     if (e.key === "Escape" && overlay.classList.contains("show")) closeOverlay();
   });
 
-  state = newState();
-  render();
+  function startGame(name) {
+    playerName = name;
+    gate.classList.remove("show");
+    state = newState();
+    render();
+    scored = false;
+    startTime = Date.now();
+    startTimer();
+  }
+
+  gateForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = nameInput.value.trim();
+    if (!name) return;
+    startGame(name);
+  });
+
+  function renderBoardList(target, statusEl, entries) {
+    target.innerHTML = "";
+    if (!entries || entries.length === 0) {
+      if (statusEl) statusEl.textContent = "No times recorded yet — be the first.";
+      return;
+    }
+    if (statusEl) statusEl.textContent = "";
+    entries.forEach(function (entry, i) {
+      var li = document.createElement("li");
+      var name = document.createElement("span");
+      name.className = "b-name";
+      name.textContent = (i + 1) + ". " + entry.name;
+      var time = document.createElement("span");
+      time.className = "b-time";
+      time.textContent = formatTime(entry.timeMs);
+      li.appendChild(name);
+      li.appendChild(time);
+      target.appendChild(li);
+    });
+  }
+
+  function loadBoard(target, statusEl) {
+    if (dbState === "unavailable") {
+      target.innerHTML = "";
+      if (statusEl) statusEl.textContent = "Leaderboard unavailable in this preview.";
+      return;
+    }
+    if (statusEl) statusEl.textContent = "Loading fastest times…";
+    if (dbState === "pending") return;
+    window.__bingo.fetchTop(10).then(function (entries) {
+      renderBoardList(target, statusEl, entries);
+    }).catch(function () {
+      if (statusEl) statusEl.textContent = "Leaderboard unavailable right now.";
+    });
+  }
+
+  window.addEventListener("bingo-db-ready", function () {
+    dbState = "ready";
+    loadBoard(gateBoardList, gateBoardStatus);
+    if (boardOverlay.classList.contains("show")) loadBoard(boardList, boardStatus);
+  });
+
+  setTimeout(function () {
+    if (dbState === "pending") {
+      dbState = "unavailable";
+      loadBoard(gateBoardList, gateBoardStatus);
+    }
+  }, 4000);
+
+  leaderboardBtn.addEventListener("click", function () {
+    boardOverlay.classList.add("show");
+    loadBoard(boardList, boardStatus);
+  });
+  closeBoardBtn.addEventListener("click", function () { boardOverlay.classList.remove("show"); });
+  boardOverlay.addEventListener("click", function (e) { if (e.target === boardOverlay) boardOverlay.classList.remove("show"); });
+
+  loadBoard(gateBoardList, gateBoardStatus);
 
   var canvas = document.getElementById("confetti");
   var ctx = canvas.getContext("2d");
