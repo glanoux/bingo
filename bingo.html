@@ -1,4 +1,4 @@
-<title>Bingo des phrases</title>
+<title>Phrase Bingo</title>
 <style>
   @font-face {
     font-family: "Anton";
@@ -396,42 +396,42 @@
 
 <div class="stage">
   <header class="masthead">
-    <p class="eyebrow" id="ticketNo">Carte officielle · N° 0000</p>
+    <p class="eyebrow" id="ticketNo">Official card · No. 0000</p>
     <h1 class="title">BINGO</h1>
-    <p class="subtitle">La grille des phrases qu'on entend en boucle. Coche une case chaque fois qu'elle tombe — cinq alignées, dans n'importe quel sens, et la carte est tamponnée.</p>
+    <p class="subtitle">The card for the phrases you hear on repeat. Mark a square every time it comes up — five in a row, any direction, and the card gets stamped.</p>
   </header>
 
   <div class="ticket">
     <div class="perf top"></div>
     <div class="ticket-head">
-      <span><span class="label">Cases cochées</span><br><span class="value" id="statMarked">1 / 25</span></span>
-      <span style="text-align:center"><span class="label">Lignes</span><br><span class="value" id="statLines">0</span></span>
-      <span style="text-align:right"><span class="label">Imprimée</span><br><span class="value" id="statDate">—</span></span>
+      <span><span class="label">Marked</span><br><span class="value" id="statMarked">1 / 25</span></span>
+      <span style="text-align:center"><span class="label">Lines</span><br><span class="value" id="statLines">0</span></span>
+      <span style="text-align:right"><span class="label">Printed</span><br><span class="value" id="statDate">—</span></span>
     </div>
 
     <div class="letters">
       <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
     </div>
 
-    <div class="grid" id="grid" role="group" aria-label="Grille de bingo 5 par 5"></div>
+    <div class="grid" id="grid" role="group" aria-label="5 by 5 bingo grid"></div>
 
     <div class="foot-row">
-      <p class="status">Clique une case dès qu'elle est prononcée. <strong>5</strong> alignées &#8594; bingo.</p>
-      <button class="reshuffle" id="reshuffleBtn" type="button">Nouvelle grille</button>
+      <p class="status">Click a square as soon as it's said. <strong>5</strong> in a row &#8594; bingo.</p>
+      <button class="reshuffle" id="reshuffleBtn" type="button">New card</button>
     </div>
     <div class="perf bottom"></div>
   </div>
 
-  <p class="fineprint">Valable pour une réunion, un cours ou une soutenance. Non échangeable, non remboursable, terriblement rejouable.</p>
+  <p class="fineprint">Valid for one meeting, class, or thesis defense. Not exchangeable, not refundable, dangerously replayable.</p>
 </div>
 
 <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
   <div class="win-card">
     <span class="stampword" id="overlayTitle">BINGO !</span>
-    <p id="overlayText">Ligne complétée — tampon officiel apposé sur la carte.</p>
+    <p id="overlayText">Line completed — official stamp applied to the card.</p>
     <div class="win-actions">
-      <button class="btn-ghost" id="continueBtn" type="button">Continuer</button>
-      <button class="btn-ghost" id="newFromWinBtn" type="button">Nouvelle grille</button>
+      <button class="btn-ghost" id="continueBtn" type="button">Continue</button>
+      <button class="btn-ghost" id="newFromWinBtn" type="button">New card</button>
     </div>
   </div>
 </div>
@@ -464,7 +464,7 @@
   ];
 
   var FREE_INDEX = 12;
-  var STORE_KEY = "bingo-carte-v1";
+  var STORE_KEY = "bingo-card-v1";
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var LINES = (function () {
@@ -558,7 +558,7 @@
       if (!isFree) {
         cell.type = "button";
         cell.setAttribute("aria-pressed", state.marked[i] ? "true" : "false");
-        cell.setAttribute("aria-label", "Case " + (i + 1) + " : " + state.cells[i]);
+        cell.setAttribute("aria-label", "Square " + (i + 1) + ": " + state.cells[i]);
         cell.addEventListener("click", (function (idx) {
           return function () { toggleCell(idx); };
         })(i));
@@ -611,9 +611,9 @@
     statMarked.textContent = markedCount + " / 25";
     statLines.textContent = String(state.completed.length);
     var d = new Date(state.printed);
-    statDate.textContent = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }) + " " +
-      d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    ticketNo.textContent = "Carte officielle · N° " + state.ticket;
+    statDate.textContent = d.toLocaleDateString("en-US", { day: "2-digit", month: "2-digit" }) + " " +
+      d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+    ticketNo.textContent = "Official card · No. " + state.ticket;
   }
 
   function toggleCell(i) {
@@ -637,10 +637,10 @@
   }
 
   function celebrate(newCount, totalCount) {
-    var word = newCount > 1 ? "lignes complétées" : "ligne complétée";
+    var word = newCount > 1 ? "lines completed" : "line completed";
     overlayText.textContent = totalCount > newCount
-      ? (newCount + " nouvelle" + (newCount > 1 ? "s " : " ") + word + " — " + totalCount + " au total. Tampon officiel apposé.")
-      : word.charAt(0).toUpperCase() + word.slice(1) + " — tampon officiel apposé sur la carte.";
+      ? (newCount + " new " + word + " — " + totalCount + " total. Official stamp applied.")
+      : word.charAt(0).toUpperCase() + word.slice(1) + " — official stamp applied to the card.";
     overlay.classList.add("show");
     if (!reduceMotion) burstConfetti();
   }
